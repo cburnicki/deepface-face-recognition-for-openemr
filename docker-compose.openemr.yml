@@ -1,0 +1,34 @@
+# DeepFace - Lightweight Face Recognition API
+# For use with a locally running OpenEMR instance
+# Usage: docker compose -f docker-compose.openemr.yml up -d
+
+volumes:
+  deepface-data:
+
+networks:
+  openemr:
+    external: true
+    name: development-easy-light_default  # Change this to match your OpenEMR network name
+
+services:
+  deepface:
+    image: serengil/deepface:latest
+    container_name: deepface
+    platform: linux/amd64  # Required for Apple Silicon Macs
+    restart: unless-stopped
+    ports:
+      - "${DEEPFACE_PORT:-5005}:5000"
+    environment:
+      # Disable GPU for local dev (no CUDA on Mac)
+      - CUDA_VISIBLE_DEVICES=-1
+    volumes:
+      # Persist face database and model weights
+      - deepface-data:/root/.deepface
+    networks:
+      - openemr
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s  # Models take time to load on first run

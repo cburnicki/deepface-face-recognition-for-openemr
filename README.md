@@ -6,11 +6,27 @@ Built on [DeepFace](https://github.com/serengil/deepface) - a lightweight Python
 
 ## Quick Start
 
-```bash
-# 1. Start DeepFace API
-docker compose up -d
+### Standalone Mode
 
-# 2. Start test app
+For standalone development/testing:
+
+```bash
+docker compose -f docker-compose.standalone.yml up -d
+```
+
+### With OpenEMR
+
+To connect to a locally running OpenEMR instance (joins the `openemr` Docker network):
+
+```bash
+docker compose -f docker-compose.openemr.yml up -d
+```
+
+> **Note:** OpenEMR must be running first. You may need to update the network name in `docker-compose.openemr.yml` to match your OpenEMR setup. Find your network name with `docker network ls`.
+
+### Test App
+
+```bash
 cd test-app
 npm install
 npm start
@@ -22,12 +38,13 @@ npm start
 ## Project Structure
 
 ```
-├── docker-compose.yml      # DeepFace for Mac (Apple Silicon)
-├── docker-compose.prod.yml # DeepFace for Linux production
-├── .env.example            # Optional config
-└── test-app/               # Web UI for testing
-    ├── server.js           # Express API (stores embeddings in memory)
-    └── public/index.html   # Register & search faces via webcam
+├── docker-compose.standalone.yml  # Standalone (no external networks)
+├── docker-compose.openemr.yml     # Joins OpenEMR Docker network
+├── docker-compose.prod.yml        # Linux production deployment
+├── .env.example                   # Optional config
+└── test-app/                      # Web UI for testing
+    ├── server.js                  # Express API (stores embeddings in memory)
+    └── public/index.html          # Register & search faces via webcam
 ```
 
 ## Test App Features
