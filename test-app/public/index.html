@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Face Recognition Test</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    h1 { text-align: center; color: #333; }
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .tab {
+      flex: 1;
+      padding: 15px;
+      border: none;
+      background: #ddd;
+      cursor: pointer;
+      font-size: 16px;
+      border-radius: 8px 8px 0 0;
+    }
+    .tab.active { background: #fff; font-weight: bold; }
+    .panel {
+      display: none;
+      background: #fff;
+      padding: 20px;
+      border-radius: 0 0 8px 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .panel.active { display: block; }
+    .camera-container {
+      position: relative;
+      width: 100%;
+      max-width: 400px;
+      margin: 0 auto 20px;
+    }
+    video, .preview {
+      width: 100%;
+      border-radius: 8px;
+      background: #000;
+    }
+    .preview { max-height: 300px; object-fit: contain; }
+    .controls {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin: 15px 0;
+    }
+    button {
+      padding: 12px 24px;
+      font-size: 14px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      background: #007bff;
+      color: white;
+    }
+    button:hover { background: #0056b3; }
+    button:disabled { background: #ccc; cursor: not-allowed; }
+    button.secondary { background: #6c757d; }
+    button.success { background: #28a745; }
+    input[type="text"] {
+      padding: 12px;
+      font-size: 16px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      width: 100%;
+      max-width: 300px;
+    }
+    input[type="file"] { display: none; }
+    .form-row {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      align-items: center;
+      margin: 15px 0;
+      flex-wrap: wrap;
+    }
+    .status {
+      text-align: center;
+      padding: 10px;
+      border-radius: 6px;
+      margin: 10px 0;
+    }
+    .status.error { background: #f8d7da; color: #721c24; }
+    .status.success { background: #d4edda; color: #155724; }
+    .status.info { background: #cce5ff; color: #004085; }
+    .results {
+      margin-top: 20px;
+    }
+    .match {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
+    .match img {
+      width: 80px;
+      height: 80px;
+      object-fit: cover;
+      border-radius: 50%;
+    }
+    .match-info { flex: 1; }
+    .match-name { font-weight: bold; font-size: 18px; }
+    .match-score {
+      font-size: 24px;
+      font-weight: bold;
+      padding: 5px 15px;
+      border-radius: 6px;
+    }
+    .match-score.high { background: #28a745; color: white; }
+    .match-score.medium { background: #ffc107; color: #333; }
+    .match-score.low { background: #dc3545; color: white; }
+    .registered-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 15px;
+      margin-top: 20px;
+    }
+    .registered-person {
+      text-align: center;
+      padding: 10px;
+      background: #f8f9fa;
+      border-radius: 8px;
+    }
+    .registered-person img {
+      width: 80px;
+      height: 80px;
+      object-fit: cover;
+      border-radius: 50%;
+    }
+    .registered-person .name {
+      margin-top: 8px;
+      font-weight: 500;
+    }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <h1>Face Recognition Test</h1>
+
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('register')">Register Person</button>
+    <button class="tab" onclick="showTab('search')">Search Face</button>
+    <button class="tab" onclick="showTab('list')">Registered People</button>
+  </div>
+
+  <!-- Register Panel -->
+  <div id="register-panel" class="panel active">
+    <div class="camera-container">
+      <video id="register-video" autoplay playsinline></video>
+      <img id="register-preview" class="preview hidden" />
+    </div>
+
+    <div class="controls">
+      <button onclick="startCamera('register')">Start Camera</button>
+      <button onclick="capture('register')">Capture</button>
+      <button class="secondary" onclick="document.getElementById('register-upload').click()">Upload Photo</button>
+      <input type="file" id="register-upload" accept="image/*" onchange="handleUpload(event, 'register')" />
+    </div>
+
+    <div class="form-row">
+      <input type="text" id="person-name" placeholder="Enter person's name" />
+      <button class="success" onclick="registerPerson()">Register</button>
+    </div>
+
+    <div id="register-status" class="status hidden"></div>
+  </div>
+
+  <!-- Search Panel -->
+  <div id="search-panel" class="panel">
+    <div class="camera-container">
+      <video id="search-video" autoplay playsinline></video>
+      <img id="search-preview" class="preview hidden" />
+    </div>
+
+    <div class="controls">
+      <button onclick="startCamera('search')">Start Camera</button>
+      <button onclick="capture('search')">Capture</button>
+      <button class="secondary" onclick="document.getElementById('search-upload').click()">Upload Photo</button>
+      <input type="file" id="search-upload" accept="image/*" onchange="handleUpload(event, 'search')" />
+      <button class="success" onclick="searchFace()">Search</button>
+    </div>
+
+    <div id="search-status" class="status hidden"></div>
+
+    <div id="search-results" class="results"></div>
+  </div>
+
+  <!-- List Panel -->
+  <div id="list-panel" class="panel">
+    <button onclick="loadPeople()">Refresh List</button>
+    <div id="people-list" class="registered-list"></div>
+  </div>
+
+  <canvas id="canvas" style="display: none;"></canvas>
+
+  <script>
+    let streams = { register: null, search: null };
+    let photos = { register: null, search: null };
+
+    function showTab(tab) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      document.querySelector(`.tab:nth-child(${tab === 'register' ? 1 : tab === 'search' ? 2 : 3})`).classList.add('active');
+      document.getElementById(`${tab}-panel`).classList.add('active');
+
+      if (tab === 'list') loadPeople();
+    }
+
+    async function startCamera(mode) {
+      try {
+        if (streams[mode]) {
+          streams[mode].getTracks().forEach(t => t.stop());
+        }
+
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'user', width: 640, height: 480 }
+        });
+        streams[mode] = stream;
+
+        const video = document.getElementById(`${mode}-video`);
+        const preview = document.getElementById(`${mode}-preview`);
+
+        video.srcObject = stream;
+        video.classList.remove('hidden');
+        preview.classList.add('hidden');
+        photos[mode] = null;
+
+        showStatus(mode, 'Camera started', 'info');
+      } catch (err) {
+        showStatus(mode, 'Failed to access camera: ' + err.message, 'error');
+      }
+    }
+
+    function capture(mode) {
+      const video = document.getElementById(`${mode}-video`);
+      const preview = document.getElementById(`${mode}-preview`);
+      const canvas = document.getElementById('canvas');
+
+      if (!streams[mode]) {
+        showStatus(mode, 'Start camera first', 'error');
+        return;
+      }
+
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext('2d').drawImage(video, 0, 0);
+
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+      photos[mode] = dataUrl;
+
+      preview.src = dataUrl;
+      preview.classList.remove('hidden');
+      video.classList.add('hidden');
+
+      streams[mode].getTracks().forEach(t => t.stop());
+      streams[mode] = null;
+
+      showStatus(mode, 'Photo captured', 'success');
+    }
+
+    function handleUpload(event, mode) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const dataUrl = e.target.result;
+        photos[mode] = dataUrl;
+
+        const video = document.getElementById(`${mode}-video`);
+        const preview = document.getElementById(`${mode}-preview`);
+
+        preview.src = dataUrl;
+        preview.classList.remove('hidden');
+        video.classList.add('hidden');
+
+        if (streams[mode]) {
+          streams[mode].getTracks().forEach(t => t.stop());
+          streams[mode] = null;
+        }
+
+        showStatus(mode, 'Photo uploaded', 'success');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    async function registerPerson() {
+      const name = document.getElementById('person-name').value.trim();
+
+      if (!name) {
+        showStatus('register', 'Please enter a name', 'error');
+        return;
+      }
+
+      if (!photos.register) {
+        showStatus('register', 'Please capture or upload a photo', 'error');
+        return;
+      }
+
+      showStatus('register', 'Registering...', 'info');
+
+      try {
+        const res = await fetch('/api/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, photo: photos.register })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          showStatus('register', `Registered: ${data.name}`, 'success');
+          document.getElementById('person-name').value = '';
+          photos.register = null;
+          document.getElementById('register-preview').classList.add('hidden');
+        } else {
+          showStatus('register', data.error || 'Registration failed', 'error');
+        }
+      } catch (err) {
+        showStatus('register', 'Error: ' + err.message, 'error');
+      }
+    }
+
+    async function searchFace() {
+      if (!photos.search) {
+        showStatus('search', 'Please capture or upload a photo', 'error');
+        return;
+      }
+
+      showStatus('search', 'Searching...', 'info');
+      document.getElementById('search-results').innerHTML = '';
+
+      try {
+        const res = await fetch('/api/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ photo: photos.search })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          if (data.matches && data.matches.length > 0) {
+            showStatus('search', `Found ${data.matches.length} result(s)`, 'success');
+            renderMatches(data.matches);
+          } else {
+            showStatus('search', data.message || 'No matches found', 'info');
+          }
+        } else {
+          showStatus('search', data.error || 'Search failed', 'error');
+        }
+      } catch (err) {
+        showStatus('search', 'Error: ' + err.message, 'error');
+      }
+    }
+
+    function renderMatches(matches) {
+      const container = document.getElementById('search-results');
+      container.innerHTML = matches.map(m => {
+        const scoreClass = m.similarity >= 0.6 ? 'high' : m.similarity >= 0.4 ? 'medium' : 'low';
+        const percent = Math.round(m.similarity * 100);
+        return `
+          <div class="match">
+            <img src="${m.photo}" alt="${m.name}" />
+            <div class="match-info">
+              <div class="match-name">${m.name}</div>
+              <div>Similarity: ${m.similarity}</div>
+            </div>
+            <div class="match-score ${scoreClass}">${percent}%</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function loadPeople() {
+      try {
+        const res = await fetch('/api/people');
+        const people = await res.json();
+
+        const container = document.getElementById('people-list');
+
+        if (people.length === 0) {
+          container.innerHTML = '<p>No people registered yet.</p>';
+          return;
+        }
+
+        container.innerHTML = people.map(p => `
+          <div class="registered-person">
+            <img src="${p.photo}" alt="${p.name}" />
+            <div class="name">${p.name}</div>
+          </div>
+        `).join('');
+      } catch (err) {
+        document.getElementById('people-list').innerHTML = '<p>Failed to load list.</p>';
+      }
+    }
+
+    function showStatus(mode, message, type) {
+      const el = document.getElementById(`${mode}-status`);
+      el.textContent = message;
+      el.className = `status ${type}`;
+      el.classList.remove('hidden');
+    }
+  </script>
+</body>
+</html>

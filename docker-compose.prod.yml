@@ -1,0 +1,37 @@
+# DeepFace - Lightweight Face Recognition API
+# Production deployment on Linux
+# Usage: docker compose -f docker-compose.prod.yml up -d
+
+volumes:
+  deepface-data:
+
+services:
+  deepface:
+    image: serengil/deepface:latest
+    container_name: deepface
+    restart: always
+    ports:
+      - "${DEEPFACE_PORT:-5005}:5000"
+    environment:
+      # Set to -1 to disable GPU, or 0,1,2... for specific GPUs
+      - CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:--1}
+    volumes:
+      # Persist face database and model weights
+      - deepface-data:/root/.deepface
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

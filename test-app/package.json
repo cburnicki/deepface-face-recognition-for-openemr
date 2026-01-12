@@ -1,0 +1,12 @@
+{
+  "name": "deepface-test-app",
+  "version": "1.0.0",
+  "description": "Simple test UI for DeepFace face recognition",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}

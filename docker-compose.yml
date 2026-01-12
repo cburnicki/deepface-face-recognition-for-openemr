@@ -1,0 +1,27 @@
+# DeepFace - Lightweight Face Recognition API
+# Local development on Mac (Apple Silicon compatible)
+# Usage: docker compose up -d
+
+volumes:
+  deepface-data:
+
+services:
+  deepface:
+    image: serengil/deepface:latest
+    container_name: deepface
+    platform: linux/amd64  # Required for Apple Silicon Macs
+    restart: unless-stopped
+    ports:
+      - "${DEEPFACE_PORT:-5005}:5000"
+    environment:
+      # Disable GPU for local dev (no CUDA on Mac)
+      - CUDA_VISIBLE_DEVICES=-1
+    volumes:
+      # Persist face database and model weights
+      - deepface-data:/root/.deepface
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s  # Models take time to load on first run
